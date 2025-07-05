@@ -2,7 +2,7 @@
 
 # --- تنظیمات ---
 # ✅ آدرس URL خامی که از گیت‌هاب کپی کردید را اینجا قرار دهید
-BOT_BINARY_URL="https://github.com/Eslender73/Backhoul_Tel/raw/refs/heads/main/monitor_bot.bin"
+BOT_BINARY_URL="https://raw.githubusercontent.com/Eslender73/Backhoul_Tel/main/monitor_bot.bin"
 
 # مسیر نصب ربات
 INSTALL_DIR="/opt/monitor_bot"
