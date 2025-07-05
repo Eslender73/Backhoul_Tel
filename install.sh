@@ -16,10 +16,15 @@ SERVICE_NAME="monitor_bot.service"
 # تابع برای پرسیدن سوالات و ساخت فایل کانفیگ
 create_config() {
     echo "--- شروع پیکربندی ربات ---"
-    read -p "لطفاً توکن تلگرام (TELEGRAM_TOKEN) را وارد کنید: " TELEGRAM_TOKEN
-    read -p "لطفاً آیدی عددی چت (CHAT_ID) را وارد کنید: " CHAT_ID
+
+    # --- ✅ تغییر اصلی اینجاست: افزودن < /dev/tty ---
+    # این کد به دستور read می‌گوید که ورودی را مستقیماً از ترمینال بگیرد
+    read -p "لطفاً توکن تلگرام (TELEGRAM_TOKEN) را وارد کنید: " TELEGRAM_TOKEN < /dev/tty
+    read -p "لطفاً آیدی عددی چت (CHAT_ID) را وارد کنید: " CHAT_ID < /dev/tty
     
     echo "در حال ساخت فایل $CONFIG_FILE..."
+
+    # استفاده از Heredoc برای ساخت امن فایل JSON
     cat << EOF > "$INSTALL_DIR/$CONFIG_FILE"
 {
   "telegram_token": "$TELEGRAM_TOKEN",
