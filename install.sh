@@ -17,9 +17,6 @@ install_dependencies() {
         build-essential pkg-config python3-dev \
         libcairo2-dev ninja-build
 
-    echo "Upgrading Meson to meet build requirements..."
-    pip3 install --upgrade meson
-
     echo "Downloading requirements.txt..."
     curl -L -o "requirements.txt" "$REQUIREMENTS_URL"
     if [ $? -ne 0 ]; then
