@@ -15,7 +15,10 @@ install_dependencies() {
     apt update && apt install -y \
         jq curl python3-pip \
         build-essential pkg-config python3-dev \
-        libcairo2-dev meson ninja-build
+        libcairo2-dev ninja-build
+
+    echo "Upgrading Meson to meet build requirements..."
+    pip3 install --upgrade meson
 
     echo "Downloading requirements.txt..."
     curl -L -o "requirements.txt" "$REQUIREMENTS_URL"
@@ -23,13 +26,14 @@ install_dependencies() {
         echo "❌ Error downloading requirements.txt."
         exit 1
     fi
-    
+
     echo "Installing Python libraries with pip..."
     pip3 install -r requirements.txt
     if [ $? -ne 0 ]; then
         echo "❌ Error installing Python libraries."
         exit 1
     fi
+
     rm requirements.txt
 }
 
