@@ -1,4 +1,4 @@
 python-telegram-bot
 requests
 paramiko
-"python-telegram-bot[job-queue]"
+python-telegram-bot[job-queue]
