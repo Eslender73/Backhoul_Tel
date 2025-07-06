@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # --- Configuration ---
-BOT_BINARY_URL="https://raw.githubusercontent.com/Eslender73/Backhoul_Tel/main/monitor_bot.bin"
+BOT_BINARY_URL="https://raw.githubusercontent.com/Eslender73/Backhoul_Tel/main/monitor_bot.pyc"
 REQUIREMENTS_URL="https://raw.githubusercontent.com/Eslender73/Backhoul_Tel/main/requirements.txt"
 
 INSTALL_DIR="/opt/monitor_bot"
-BOT_BINARY="monitor_bot.bin"
+BOT_BINARY="monitor_bot.pyc"
 CONFIG_FILE="$INSTALL_DIR/config.json"
 SERVICE_NAME="monitor_bot.service"
 
@@ -86,7 +86,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=$INSTALL_DIR/$BOT_BINARY
+ExecStart=python3 $INSTALL_DIR/$BOT_BINARY
 WorkingDirectory=$INSTALL_DIR
 Restart=always
 User=root
