@@ -1,54 +1,101 @@
 #!/bin/bash
 
-# --- تنظیمات ---
-# ✅ آدرس URL خامی که از گیت‌هاب کپی کردید را اینجا قرار دهید
-BOT_BINARY_URL="https://raw.githubusercontent.com/Eslender73/Backhoul_Tel/main/monitor_bot.bin"
+# --- Configuration ---
+BOT_PYC_URL="https://raw.githubusercontent.com/Eslender73/Backhoul_Tel/main/monitor_bot.pyc"
+REQUIREMENTS_URL="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/requirements.txt"
 
-# مسیر نصب ربات
 INSTALL_DIR="/opt/monitor_bot"
-# نام فایل اجرایی کامپایل شده
-BOT_BINARY="monitor_bot.bin"
-# نام فایل کانفیگ
-CONFIG_FILE="config.json"
-# نام سرویس systemd
+BOT_FILE="monitor_bot.pyc"
 SERVICE_NAME="monitor_bot.service"
+CONFIG_FILE="$INSTALL_DIR/config.json"
 
-# تابع برای پرسیدن سوالات و ساخت فایل کانفیگ
-create_config() {
-    echo "--- شروع پیکربندی ربات ---"
+# Function to install dependencies
+install_dependencies() {
+    echo "Installing required packages..."
+    apt update && apt install -y jq curl python3-pip
 
-    # --- ✅ تغییر اصلی اینجاست: افزودن < /dev/tty ---
-    # این کد به دستور read می‌گوید که ورودی را مستقیماً از ترمینال بگیرد
-    read -p "لطفاً توکن تلگرام (TELEGRAM_TOKEN) را وارد کنید: " TELEGRAM_TOKEN < /dev/tty
-    read -p "لطفاً آیدی عددی چت (CHAT_ID) را وارد کنید: " CHAT_ID < /dev/tty
+    echo "Downloading requirements.txt..."
+    curl -L -o "requirements.txt" "$REQUIREMENTS_URL"
+    if [ $? -ne 0 ]; then
+        echo "❌ Error downloading requirements.txt."
+        exit 1
+    fi
     
-    echo "در حال ساخت فایل $CONFIG_FILE..."
+    echo "Installing Python libraries with pip..."
+    pip3 install -r requirements.txt
+    if [ $? -ne 0 ]; then
+        echo "❌ Error installing Python libraries."
+        exit 1
+    fi
+    rm requirements.txt
+}
 
-    # استفاده از Heredoc برای ساخت امن فایل JSON
-    cat << EOF > "$INSTALL_DIR/$CONFIG_FILE"
+# Function to create config file
+create_config() {
+    echo "Setting up configuration..."
+
+    if [ -f "$CONFIG_FILE" ]; then
+        echo "Existing config file found."
+        TELEGRAM_TOKEN=$(jq -r '.telegram_token' "$CONFIG_FILE")
+        CHAT_ID=$(jq -r '.chat_id' "$CONFIG_FILE")
+        SERVERS_FILE=$(jq -r '.servers_file' "$CONFIG_FILE")
+        IRAN_SERVERS_FILE=$(jq -r '.iran_servers_file' "$CONFIG_FILE")
+        CRON_LINKS_FILE=$(jq -r '.cron_links_file' "$CONFIG_FILE")
+        UPDATE_INTERVAL=$(jq -r '.update_interval_seconds' "$CONFIG_FILE")
+    else
+        TELEGRAM_TOKEN=""
+        CHAT_ID=""
+        SERVERS_FILE="servers.tolm"
+        IRAN_SERVERS_FILE="iran_servers.json"
+        CRON_LINKS_FILE="cron_links.json"
+        UPDATE_INTERVAL=5
+    fi
+
+    read -p "Telegram Token [$TELEGRAM_TOKEN]: " input
+    TELEGRAM_TOKEN=${input:-$TELEGRAM_TOKEN}
+
+    read -p "Chat ID [$CHAT_ID]: " input
+    CHAT_ID=${input:-$CHAT_ID}
+
+    read -p "Servers file [$SERVERS_FILE]: " input
+    SERVERS_FILE=${input:-$SERVERS_FILE}
+
+    read -p "Iran servers file [$IRAN_SERVERS_FILE]: " input
+    IRAN_SERVERS_FILE=${input:-$IRAN_SERVERS_FILE}
+
+    read -p "Cron links file [$CRON_LINKS_FILE]: " input
+    CRON_LINKS_FILE=${input:-$CRON_LINKS_FILE}
+
+    read -p "Update interval (seconds) [$UPDATE_INTERVAL]: " input
+    UPDATE_INTERVAL=${input:-$UPDATE_INTERVAL}
+
+    mkdir -p "$INSTALL_DIR"
+
+    cat <<EOF > "$CONFIG_FILE"
 {
   "telegram_token": "$TELEGRAM_TOKEN",
   "chat_id": "$CHAT_ID",
-  "servers_file": "servers.tolm",
-  "iran_servers_file": "iran_servers.json",
-  "cron_links_file": "cron_links.json",
-  "update_interval_seconds": 5
+  "servers_file": "$SERVERS_FILE",
+  "iran_servers_file": "$IRAN_SERVERS_FILE",
+  "cron_links_file": "$CRON_LINKS_FILE",
+  "update_interval_seconds": $UPDATE_INTERVAL
 }
 EOF
-    echo "✅ فایل کانفیگ با موفقیت ساخته شد."
+
+    echo "✅ Config saved to $CONFIG_FILE"
 }
 
-# تابع برای ساخت و نصب سرویس systemd
+# Function to create systemd service
 create_service() {
-    echo "در حال ساخت فایل سرویس systemd..."
+    echo "Creating systemd service..."
     cat << EOF > "/etc/systemd/system/$SERVICE_NAME"
 [Unit]
-Description=Telegram Monitor Bot Service
+Description=Telegram Monitor Bot Service (.pyc)
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=$INSTALL_DIR/$BOT_BINARY
+ExecStart=/usr/bin/python3 $INSTALL_DIR/$BOT_FILE
 WorkingDirectory=$INSTALL_DIR
 Restart=always
 User=root
@@ -57,62 +104,54 @@ User=root
 WantedBy=multi-user.target
 EOF
 
-    echo "در حال فعال‌سازی و اجرای سرویس..."
+    echo "Enabling and starting the service..."
     systemctl daemon-reload
     systemctl enable $SERVICE_NAME
     systemctl start $SERVICE_NAME
-    
-    echo "✅ سرویس با موفقیت نصب و اجرا شد."
-    echo "برای بررسی وضعیت، از دستور زیر استفاده کنید:"
-    echo "systemctl status $SERVICE_NAME"
+    echo "✅ Service installed and started successfully."
 }
 
-# تابع برای حذف کامل ربات
-uninstall() {
-    echo "در حال توقف و حذف سرویس..."
+# Function to uninstall the bot
+uninstall_bot() {
+    echo "Stopping and disabling the service..."
     systemctl stop $SERVICE_NAME
     systemctl disable $SERVICE_NAME
     rm -f "/etc/systemd/system/$SERVICE_NAME"
-    systemctl daemon-reload
-    
-    echo "در حال حذف فایل‌های ربات..."
+
+    echo "Removing installed files..."
     rm -rf "$INSTALL_DIR"
-    
-    echo "✅ ربات و تمام فایل‌های مرتبط با آن با موفقیت حذف شدند."
+
+    echo "Reloading systemd..."
+    systemctl daemon-reload
+
+    echo "🗑️ Uninstallation complete."
 }
 
-# مدیریت آرگومان‌های ورودی
+# Main script logic
 if [ "$1" == "install" ]; then
-    echo "شروع فرآیند نصب..."
-    
-    # ✅ دانلود فایل اجرایی ربات از گیت‌هاب
-    echo "Downloading bot binary from GitHub..."
-    curl -L -o "$BOT_BINARY" "$BOT_BINARY_URL"
+    echo "🚀 Starting installation..."
+
+    echo "Downloading bot .pyc file from GitHub..."
+    curl -L -o "$BOT_FILE" "$BOT_PYC_URL"
     if [ $? -ne 0 ]; then
-        echo "❌ خطا در دانلود فایل ربات. لطفاً از صحیح بودن URL مطمئن شوید."
+        echo "❌ Error downloading bot file."
         exit 1
     fi
-    
-    # ایجاد پوشه نصب
+
     mkdir -p "$INSTALL_DIR"
-    # کپی کردن فایل اجرایی به محل نصب
-    mv "./$BOT_BINARY" "$INSTALL_DIR/"
-    chmod +x "$INSTALL_DIR/$BOT_BINARY"
-    
-    # اجرای توابع
+    mv "./$BOT_FILE" "$INSTALL_DIR/"
+
+    install_dependencies
     create_config
     create_service
-    echo "🎉 نصب کامل شد!"
+    echo "🎉 Installation complete!"
 
 elif [ "$1" == "uninstall" ]; then
-    read -p "آیا از حذف کامل ربات و تمام فایل‌های آن مطمئن هستید؟ (y/n) " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        uninstall
-    else
-        echo "عملیات لغو شد."
-    fi
+    uninstall_bot
+
 else
-    echo "دستور نامعتبر است."
-    echo "نحوه استفاده: sudo bash -s install [یا uninstall]"
+    echo "❌ Invalid command."
+    echo "Usage:"
+    echo "  $0 install     - Install the bot"
+    echo "  $0 uninstall   - Uninstall the bot"
 fi
