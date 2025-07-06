@@ -1,104 +1,93 @@
 #!/bin/bash
 
-# --- Configuration ---
-BOT_PYC_URL="https://raw.githubusercontent.com/Eslender73/Backhoul_Tel/main/monitor_bot.pyc"
+# --- تنظیمات ---
+BOT_BINARY_URL="https://raw.githubusercontent.com/Eslender73/Backhoul_Tel/main/monitor_bot.bin"
 REQUIREMENTS_URL="https://raw.githubusercontent.com/Eslender73/Backhoul_Tel/main/requirements.txt"
 
 INSTALL_DIR="/opt/monitor_bot"
-BOT_FILE="monitor_bot.pyc"
-SERVICE_NAME="monitor_bot.service"
+BOT_BINARY="monitor_bot.bin"
 CONFIG_FILE="$INSTALL_DIR/config.json"
+SERVICE_NAME="monitor_bot.service"
 
-# Function to install dependencies
+# تابع برای نصب نیازمندی‌ها
 install_dependencies() {
-    echo "Installing system dependencies for building some Python packages..."
-    apt update && apt install -y \
-        jq curl python3-pip \
-        build-essential pkg-config python3-dev \
-        libcairo2-dev ninja-build
+    echo "--- مرحله ۱: نصب نیازمندی‌های سیستم ---"
+    # jq برای خواندن فایل جیسون اضافه شد
+    apt update && apt install -y curl python3-pip jq build-essential
+    if [ $? -ne 0 ]; then echo "❌ خطا در نصب نیازمندی‌های سیستم."; exit 1; fi
 
-    echo "Downloading requirements.txt..."
+    echo "در حال دانلود requirements.txt..."
     curl -L -o "requirements.txt" "$REQUIREMENTS_URL"
-    if [ $? -ne 0 ]; then
-        echo "❌ Error downloading requirements.txt."
-        exit 1
-    fi
+    if [ $? -ne 0 ]; then echo "❌ خطا در دانلود فایل نیازمندی‌ها."; exit 1; fi
 
-    echo "Installing Python libraries with pip..."
+    echo "در حال نصب کتابخانه‌های پایتون..."
     pip3 install -r requirements.txt
-    if [ $? -ne 0 ]; then
-        echo "❌ Error installing Python libraries."
-        exit 1
-    fi
+    if [ $? -ne 0 ]; then echo "❌ خطا در نصب کتابخانه‌های پایتون."; exit 1; fi
 
     rm requirements.txt
+    echo "✅ نیازمندی‌ها با موفقیت نصب شدند."
 }
 
-# Function to create config file
+# تابع برای پرسیدن سوالات و ساخت فایل کانفیگ
 create_config() {
-    echo "Configuring bot settings..."
+    echo "--- مرحله ۳: پیکربندی ربات ---"
 
-    TELEGRAM_TOKEN=""
-    CHAT_ID=""
-    SERVERS_FILE="servers.tolm"
-    IRAN_SERVERS_FILE="iran_servers.json"
-    CRON_LINKS_FILE="cron_links.json"
-    UPDATE_INTERVAL=5
+    # مقادیر پیش‌فرض
+    DEFAULT_TOKEN=""
+    DEFAULT_CHAT_ID=""
+    DEFAULT_INTERVAL=5
 
+    # اگر فایل کانفیگ از قبل وجود داشت، مقادیر آن را به عنوان پیش‌فرض می‌خوانیم
     if [ -f "$CONFIG_FILE" ]; then
-        echo "⚠️ Existing config file found. Current values will be shown as defaults."
-        TELEGRAM_TOKEN=$(jq -r '.telegram_token' "$CONFIG_FILE")
-        CHAT_ID=$(jq -r '.chat_id' "$CONFIG_FILE")
-        SERVERS_FILE=$(jq -r '.servers_file' "$CONFIG_FILE")
-        IRAN_SERVERS_FILE=$(jq -r '.iran_servers_file' "$CONFIG_FILE")
-        CRON_LINKS_FILE=$(jq -r '.cron_links_file' "$CONFIG_FILE")
-        UPDATE_INTERVAL=$(jq -r '.update_interval_seconds' "$CONFIG_FILE")
+        echo "⚠️ فایل کانفیگ قبلی یافت شد. مقادیر فعلی به عنوان پیش‌فرض نمایش داده می‌شوند."
+        DEFAULT_TOKEN=$(jq -r '.telegram_token' "$CONFIG_FILE")
+        DEFAULT_CHAT_ID=$(jq -r '.chat_id' "$CONFIG_FILE")
+        DEFAULT_INTERVAL=$(jq -r '.update_interval_seconds' "$CONFIG_FILE")
     fi
 
-    read -p "Telegram Token [$TELEGRAM_TOKEN]: " input
-    TELEGRAM_TOKEN=${input:-$TELEGRAM_TOKEN}
+    # پرسیدن اطلاعات از کاربر با نمایش مقدار پیش‌فرض
+    read -p "توکن تلگرام را وارد کنید [$DEFAULT_TOKEN]: " input_token < /dev/tty
+    # اگر کاربر چیزی وارد نکرد (فقط اینتر زد)، از مقدار پیش‌فرض استفاده کن
+    TELEGRAM_TOKEN=${input_token:-$DEFAULT_TOKEN}
 
-    read -p "Chat ID [$CHAT_ID]: " input
-    CHAT_ID=${input:-$CHAT_ID}
+    read -p "آیدی عددی چت را وارد کنید [$DEFAULT_CHAT_ID]: " input_chat_id < /dev/tty
+    CHAT_ID=${input_chat_id:-$DEFAULT_CHAT_ID}
+    
+    read -p "فاصله زمانی آپدیت وضعیت (ثانیه) [$DEFAULT_INTERVAL]: " input_interval < /dev/tty
+    UPDATE_INTERVAL=${input_interval:-$DEFAULT_INTERVAL}
 
-    read -p "Servers file [$SERVERS_FILE]: " input
-    SERVERS_FILE=${input:-$SERVERS_FILE}
-
-    read -p "Iran servers file [$IRAN_SERVERS_FILE]: " input
-    IRAN_SERVERS_FILE=${input:-$IRAN_SERVERS_FILE}
-
-    read -p "Cron links file [$CRON_LINKS_FILE]: " input
-    CRON_LINKS_FILE=${input:-$CRON_LINKS_FILE}
-
-    read -p "Update interval (seconds) [$UPDATE_INTERVAL]: " input
-    UPDATE_INTERVAL=${input:-$UPDATE_INTERVAL}
-
-    mkdir -p "$INSTALL_DIR"
-
-    cat <<EOF > "$CONFIG_FILE"
+    echo "در حال ساخت فایل $CONFIG_FILE..."
+    # استفاده از Heredoc برای ساخت امن فایل JSON
+    cat << EOF > "$CONFIG_FILE"
 {
   "telegram_token": "$TELEGRAM_TOKEN",
   "chat_id": "$CHAT_ID",
-  "servers_file": "$SERVERS_FILE",
-  "iran_servers_file": "$IRAN_SERVERS_FILE",
-  "cron_links_file": "$CRON_LINKS_FILE",
+  "servers_file": "servers.tolm",
+  "iran_servers_file": "iran_servers.json",
+  "cron_links_file": "cron_links.json",
   "update_interval_seconds": $UPDATE_INTERVAL
 }
 EOF
 
-    echo "✅ Config saved to $CONFIG_FILE"
+    # ساخت فایل‌های داده خالی در صورت عدم وجود
+    touch "$INSTALL_DIR/servers.tolm"
+    touch "$INSTALL_DIR/iran_servers.json"
+    touch "$INSTALL_DIR/cron_links.json"
+
+    echo "✅ فایل کانفیگ و داده‌ها با موفقیت ساخته شدند."
 }
-# Function to create systemd service
+
+# تابع برای ساخت و نصب سرویس systemd
 create_service() {
-    echo "Creating systemd service..."
+    echo "--- مرحله ۴: ساخت و نصب سرویس systemd ---"
     cat << EOF > "/etc/systemd/system/$SERVICE_NAME"
 [Unit]
-Description=Telegram Monitor Bot Service (.pyc)
+Description=Telegram Monitor Bot
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 $INSTALL_DIR/$BOT_FILE
+ExecStart=$INSTALL_DIR/$BOT_BINARY
 WorkingDirectory=$INSTALL_DIR
 Restart=always
 User=root
@@ -107,54 +96,78 @@ User=root
 WantedBy=multi-user.target
 EOF
 
-    echo "Enabling and starting the service..."
+    echo "در حال فعال‌سازی و اجرای سرویس..."
     systemctl daemon-reload
     systemctl enable $SERVICE_NAME
-    systemctl start $SERVICE_NAME
-    echo "✅ Service installed and started successfully."
+    systemctl restart $SERVICE_NAME
+    
+    echo "✅ سرویس با موفقیت نصب و اجرا شد."
+    echo "برای بررسی وضعیت، از دستور زیر استفاده کنید:"
+    echo "systemctl status $SERVICE_NAME"
 }
 
-# Function to uninstall the bot
-uninstall_bot() {
-    echo "Stopping and disabling the service..."
-    systemctl stop $SERVICE_NAME
-    systemctl disable $SERVICE_NAME
-    rm -f "/etc/systemd/system/$SERVICE_NAME"
-
-    echo "Removing installed files..."
-    rm -rf "$INSTALL_DIR"
-
-    echo "Reloading systemd..."
-    systemctl daemon-reload
-
-    echo "🗑️ Uninstallation complete."
-}
-
-# Main script logic
-if [ "$1" == "install" ]; then
-    echo "🚀 Starting installation..."
-
-    echo "Downloading bot .pyc file from GitHub..."
-    curl -L -o "$BOT_FILE" "$BOT_PYC_URL"
-    if [ $? -ne 0 ]; then
-        echo "❌ Error downloading bot file."
-        exit 1
-    fi
-
+# تابع برای عملیات نصب کامل
+install_flow() {
+    echo "🚀 شروع فرآیند نصب/بروزرسانی..."
+    
+    echo "--- مرحله ۲: دانلود فایل اجرایی ربات ---"
+    # ابتدا سرویس قبلی را (اگر وجود دارد) متوقف می‌کنیم تا فایل قابل جایگزینی باشد
+    systemctl stop $SERVICE_NAME &>/dev/null
+    
+    curl -L -o "$BOT_BINARY" "$BOT_BINARY_URL"
+    if [ $? -ne 0 ]; then echo "❌ خطا در دانلود فایل ربات."; exit 1; fi
+    
     mkdir -p "$INSTALL_DIR"
-    mv "./$BOT_FILE" "$INSTALL_DIR/"
-
-    install_dependencies
+    mv "./$BOT_BINARY" "$INSTALL_DIR/"
+    chmod +x "$INSTALL_DIR/$BOT_BINARY"
+    echo "✅ فایل ربات با موفقیت دانلود و منتقل شد."
+    
     create_config
     create_service
-    echo "🎉 Installation complete!"
+    echo "🎉 نصب/بروزرسانی کامل شد!"
+}
 
-elif [ "$1" == "uninstall" ]; then
-    uninstall_bot
 
-else
-    echo "❌ Invalid command."
-    echo "Usage:"
-    echo "  $0 install     - Install the bot"
-    echo "  $0 uninstall   - Uninstall the bot"
-fi
+# تابع برای حذف کامل ربات
+uninstall_bot() {
+    read -p "آیا از حذف کامل ربات و تمام فایل‌های آن مطمئن هستید؟ (y/n) " -n 1 -r < /dev/tty
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo "در حال توقف و حذف سرویس..."
+        systemctl stop $SERVICE_NAME
+        systemctl disable $SERVICE_NAME
+        rm -f "/etc/systemd/system/$SERVICE_NAME"
+        systemctl daemon-reload
+        
+        echo "در حال حذف فایل‌های نصب شده..."
+        rm -rf "$INSTALL_DIR"
+        
+        echo "🗑️ حذف کامل شد."
+    else
+        echo "عملیات لغو شد."
+    fi
+}
+
+# --- ✅ منوی اصلی تعاملی ---
+clear
+echo "--- منوی مدیریت ربات مانیتورینگ ---"
+PS3="لطفاً گزینه مورد نظر را انتخاب کنید: "
+options=("نصب یا بروزرسانی ربات" "حذف ربات" "خروج")
+select opt in "${options[@]}"
+do
+    case $opt in
+        "نصب یا بروزرسانی ربات")
+            install_dependencies
+            install_flow
+            break
+            ;;
+        "حذف ربات")
+            uninstall_bot
+            break
+            ;;
+        "خروج")
+            break
+            ;;
+        *) echo "گزینه نامعتبر $REPLY";;
+    esac
+done
