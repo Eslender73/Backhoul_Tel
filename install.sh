@@ -36,23 +36,23 @@ install_dependencies() {
 
 # Function to create config file
 create_config() {
-    echo "Setting up configuration..."
+    echo "Configuring bot settings..."
+
+    TELEGRAM_TOKEN=""
+    CHAT_ID=""
+    SERVERS_FILE="servers.tolm"
+    IRAN_SERVERS_FILE="iran_servers.json"
+    CRON_LINKS_FILE="cron_links.json"
+    UPDATE_INTERVAL=5
 
     if [ -f "$CONFIG_FILE" ]; then
-        echo "Existing config file found."
+        echo "⚠️ Existing config file found. Current values will be shown as defaults."
         TELEGRAM_TOKEN=$(jq -r '.telegram_token' "$CONFIG_FILE")
         CHAT_ID=$(jq -r '.chat_id' "$CONFIG_FILE")
         SERVERS_FILE=$(jq -r '.servers_file' "$CONFIG_FILE")
         IRAN_SERVERS_FILE=$(jq -r '.iran_servers_file' "$CONFIG_FILE")
         CRON_LINKS_FILE=$(jq -r '.cron_links_file' "$CONFIG_FILE")
         UPDATE_INTERVAL=$(jq -r '.update_interval_seconds' "$CONFIG_FILE")
-    else
-        TELEGRAM_TOKEN=""
-        CHAT_ID=""
-        SERVERS_FILE="servers.tolm"
-        IRAN_SERVERS_FILE="iran_servers.json"
-        CRON_LINKS_FILE="cron_links.json"
-        UPDATE_INTERVAL=5
     fi
 
     read -p "Telegram Token [$TELEGRAM_TOKEN]: " input
@@ -88,7 +88,6 @@ EOF
 
     echo "✅ Config saved to $CONFIG_FILE"
 }
-
 # Function to create systemd service
 create_service() {
     echo "Creating systemd service..."
