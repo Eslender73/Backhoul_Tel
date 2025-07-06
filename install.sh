@@ -2,7 +2,7 @@
 
 # --- Configuration ---
 BOT_PYC_URL="https://raw.githubusercontent.com/Eslender73/Backhoul_Tel/main/monitor_bot.pyc"
-REQUIREMENTS_URL="https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/requirements.txt"
+REQUIREMENTS_URL="https://raw.githubusercontent.com/Eslender73/Backhoul_Tel/main/requirements.txt"
 
 INSTALL_DIR="/opt/monitor_bot"
 BOT_FILE="monitor_bot.pyc"
