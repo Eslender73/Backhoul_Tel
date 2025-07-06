@@ -11,8 +11,11 @@ CONFIG_FILE="$INSTALL_DIR/config.json"
 
 # Function to install dependencies
 install_dependencies() {
-    echo "Installing required packages..."
-    apt update && apt install -y jq curl python3-pip
+    echo "Installing system dependencies for building some Python packages..."
+    apt update && apt install -y \
+        jq curl python3-pip \
+        build-essential pkg-config python3-dev \
+        libcairo2-dev meson ninja-build
 
     echo "Downloading requirements.txt..."
     curl -L -o "requirements.txt" "$REQUIREMENTS_URL"
