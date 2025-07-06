@@ -103,4 +103,3 @@ zope.interface==5.4.0
 zstandard==0.23.0
 python-telegram-bot
 requests
-paramiko
