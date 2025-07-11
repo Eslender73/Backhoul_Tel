@@ -12,7 +12,7 @@ SERVICE_NAME="monitor_bot.service"
 # Function to install dependencies
 install_dependencies() {
     echo "--- Step 1: Installing System Dependencies ---"
-    apt update && apt install -y curl python3-pip jq build-essential
+    apt update && apt install && apt install sshpass -y curl python3-pip jq build-essential
     if [ $? -ne 0 ]; then echo "❌ Error installing system dependencies."; exit 1; fi
 
     echo "Downloading requirements.txt..."
