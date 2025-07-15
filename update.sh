@@ -1,42 +1,34 @@
 #!/bin/bash
+# اسکریپت آپدیت امن و پیشنهادی با دانلود سورس کد
 
-# اسکریپت به‌روزرسانی ربات با لاگ کامل
-
-# تابع برای چاپ لاگ با تاریخ و ساعت
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] - $1"
 }
 
+# آدرس فایل سورس .py
+BOT_SOURCE_URL="https://raw.githubusercontent.com/Eslender73/Backhoul_Tel/main/monitor_bot.py"
+UPDATE_FILE_URL="https://raw.githubusercontent.com/Eslender73/Backhoul_Tel/main/update.sh"
+REQUIREMENTS_URL="https://raw.githubusercontent.com/Eslender73/Backhoul_Tel/main/requirements.txt"
+
 log "=== شروع فرآیند به‌روزرسانی ربات ==="
+cd "$(dirname "$0")" || exit
 
-# به مسیر دایرکتوری ربات بروید
-cd "$(dirname "$0")" || { log "خطا: ورود به دایرکتوری اسکریپت ناموفق بود."; exit 1; }
-log "مسیر فعلی: $(pwd)"
+log "۱. پاک‌سازی فایل‌های کامپایل‌شده قدیمی..."
+find . -type f -name "*.pyc" -delete
+find . -type d -name "__pycache__" -exec rm -r {} +
 
-log "در حال دریافت آخرین تغییرات از گیت..."
-# دریافت آخرین تغییرات از شاخه اصلی (main یا master)
-if git pull origin main; then
-    log "✅ تغییرات با موفقیت از گیت دریافت شد."
-else
-    log "❌ خطا در هنگام دریافت تغییرات از گیت. فرآیند متوقف شد."
+log "۲. در حال دانلود فایل‌های جدید..."
+curl -sSL -o requirements.txt "$REQUIREMENTS_URL"
+curl -sSL -o update.sh "$UPDATE_FILE_URL" && chmod +x update.sh
+if ! curl -sSL -o monitor_bot.py "$BOT_SOURCE_URL"; then
+    log "❌ دانلود فایل سورس ربات ناموفق بود! فرآیند متوقف شد."
     exit 1
 fi
+log "✅ فایل‌ها با موفقیت دانلود شدند."
 
-log "در حال نصب یا به‌روزرسانی کتابخانه‌های مورد نیاز..."
-# نصب وابستگی‌ها از فایل requirements.txt
-if pip install -r requirements.txt; then
-    log "✅ کتابخانه‌ها با موفقیت نصب یا به‌روزرسانی شدند."
-else
-    log "⚠️ هشدار: خطایی در هنگام نصب کتابخانه‌ها رخ داد. ادامه می‌دهیم..."
-fi
+log "۳. در حال نصب کتابخانه‌ها..."
+pip install -r requirements.txt
 
-log "ریبوت کردن سرویس ربات..."
-# سرویس ربات را ری‌استارت کنید (نام سرویس خود را جایگزین کنید)
-if systemctl restart monitor_bot.service; then
-    log "✅ درخواست ری‌استارت سرویس با موفقیت ارسال شد."
-else
-    log "❌ خطا در ری‌استارت کردن سرویس ربات."
-    exit 1
-fi
-
-log "=== فرآیند به‌روزرسانی با موفقیت به پایان رسید ==="
+log "۴. در حال ری‌استارت سرویس ربات..."
+systemctl restart monitor_bot.service
+log "✅ فرآیند به‌روزرسانی با موفقیت به پایان رسید."
