@@ -2,17 +2,19 @@
 
 # --- Configuration ---
 BOT_BINARY_URL="https://raw.githubusercontent.com/Eslender73/Backhoul_Tel/main/monitor_bot.pyc"
+UPDATE_FILE_URL="https://raw.githubusercontent.com/Eslender73/Backhoul_Tel/main/update.sh"
 REQUIREMENTS_URL="https://raw.githubusercontent.com/Eslender73/Backhoul_Tel/main/requirements.txt"
 
 INSTALL_DIR="/opt/monitor_bot"
 BOT_BINARY="monitor_bot.pyc"
+UPDATE_FILE="update.sh"
 CONFIG_FILE="$INSTALL_DIR/config.json"
 SERVICE_NAME="monitor_bot.service"
 
 # Function to install dependencies
 install_dependencies() {
     echo "--- Step 1: Installing System Dependencies ---"
-    apt update && apt install && apt install sshpass -y curl python3-pip jq build-essential
+    apt update && apt install && apt install sshpass -y && pip install packaging -y && curl python3-pip jq build-essential 
     if [ $? -ne 0 ]; then echo "❌ Error installing system dependencies."; exit 1; fi
 
     echo "Downloading requirements.txt..."
@@ -120,6 +122,11 @@ install_flow() {
     mv "./$BOT_BINARY" "$INSTALL_DIR/"
     chmod +x "$INSTALL_DIR/$BOT_BINARY"
     echo "✅ Bot executable downloaded successfully."
+	curl -L -o "$UPDATE_FILE" "$UPDATE_FILE_URL"
+	if [ $? -ne 0 ]; then echo "❌ Error downloading update.sh."; exit 1; fi
+	mv "./$UPDATE_FILE" "$INSTALL_DIR/"
+	chmod +x "$INSTALL_DIR/$UPDATE_FILE"
+	echo "✅ update.sh downloaded and placed successfully."
     
     create_config
     create_service
