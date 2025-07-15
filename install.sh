@@ -14,7 +14,11 @@ SERVICE_NAME="monitor_bot.service"
 # Function to install dependencies
 install_dependencies() {
     echo "--- Step 1: Installing System Dependencies ---"
-    apt update && apt install && apt install sshpass -y && pip install httpx && pip install packaging && sudo apt update && sudo apt install -y python3-pip jq build-essential 
+    sudo apt update && \
+	sudo apt install -y python3-pip jq build-essential sshpass && \
+	pip install --upgrade pip && \
+	pip install httpx packaging
+
     if [ $? -ne 0 ]; then echo "❌ Error installing system dependencies."; exit 1; fi
 
     echo "Downloading requirements.txt..."
