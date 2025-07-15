@@ -1,8 +1,13 @@
 #!/bin/bash
-# اسکریپت آپدیت امن با دانلود سورس کد
+# اسکریپت آپدیت که تمام خروجی را در یک فایل لاگ ذخیره می‌کند
 
+# مسیر فایل لاگ در کنار خود اسکریپت
+LOG_FILE="$(dirname "$0")/update.log"
+
+# پاک کردن لاگ قدیمی
+> "$LOG_FILE"
 log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] - $1"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] - $1" | tee -a "$LOG_FILE"
 }
 
 # آدرس فایل سورس .py
@@ -18,7 +23,7 @@ sudo mkdir -p /opt/monitor_bot
 sudo chown "$USER":"$USER" /opt/monitor_bot
 
 log "۱. پاک‌سازی فایل‌های کامپایل‌شده قدیمی..."
-find . -type f -name "*.pyc" -delete
+find . -type f -name "*.pyc" -delete >> "$LOG_FILE" 2>&1
 
 log "۲. در حال دانلود فایل‌های جدید..."
 curl -sSL -o requirements.txt "$REQUIREMENTS_URL"
@@ -31,7 +36,7 @@ fi
 log "✅ فایل‌ها با موفقیت دانلود شدند."
 
 log "۳. در حال نصب کتابخانه‌ها..."
-sudo pip install -r requirements.txt
+pip install -r requirements.txt >> "$LOG_FILE" 2>&1
 
 log "۴. در حال ری‌استارت سرویس ربات..."
 sudo systemctl restart monitor_bot.service
