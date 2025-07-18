@@ -9,7 +9,7 @@
 ```bash
 curl -sL -o install.sh https://raw.githubusercontent.com/Eslender73/Backhoul_Tel/main/install.sh && chmod +x install.sh && sudo ./install.sh
 ```
-این دستور به‌صورت خودکار اسکریپت نصب را دانلود کرده، دسترسی اجرایی به آن می‌دهد و آن را اجرا می‌کند.
+
 
 🧰 پیش‌نیازها
 
